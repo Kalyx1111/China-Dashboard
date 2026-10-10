@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>China Digital Dashboard &mdash; OSINT Snapshot</title>
+<style>:root{
+  --bg:#080b11; --bg2:#0a0f18;
+  --panel:#0f1826; --panel2:#0c1420;
+  --border:#1c2942; --border-soft:#161f30;
+  --text:#e7ecf5; --text-dim:#8b9bb4; --text-faint:#54607a;
+  --gold:#c9a35c; --gold-soft:#8a774a;
+  --amber:#ff9a4d; --red:#ef5354; --cyan-h:#58c4ff;
+  --violet:#a98bff; --green:#5fc48d; --magenta:#ff5fa2;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;}
+body{background:
+  radial-gradient(1200px 600px at 85% -10%, rgba(88,196,255,0.05), transparent 60%),
+  radial-gradient(1000px 500px at -10% 20%, rgba(201,163,92,0.05), transparent 55%),
+  var(--bg);
+  min-height:100vh;
+}
+a{color:inherit;}
+::selection{background:rgba(201,163,92,0.35);}
+.wrap{max-width:1500px;margin:0 auto;padding:16px 16px 40px;}
+
+.hdr{display:flex;align-items:center;gap:14px;padding:10px 6px 18px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand svg{display:block;}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;}
+.brand-title{font-size:19px;font-weight:800;letter-spacing:0.09em;text-transform:uppercase;color:var(--text);}
+.brand-sub{font-size:11px;letter-spacing:0.08em;color:var(--text-faint);text-transform:uppercase;margin-top:3px;}
+.search-wrap{flex:1;min-width:180px;max-width:400px;position:relative;}
+.search-wrap input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:999px;
+  padding:10px 16px 10px 38px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;}
+.search-wrap input::placeholder{color:var(--text-faint);}
+.search-wrap input:focus{border-color:var(--gold-soft);box-shadow:0 0 0 3px rgba(201,163,92,0.12);}
+.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:0.55;}
+.hdr-right{display:flex;align-items:center;gap:12px;margin-left:auto;flex-wrap:wrap;}
+.hdr-clock{font-family:var(--mono);font-size:12px;color:var(--text-dim);text-align:right;line-height:1.3;white-space:nowrap;}
+.hdr-clock b{color:var(--text);display:block;font-size:13px;}
+
+.window-toggle{display:flex;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:2px;}
+.wt-btn{background:none;border:none;color:var(--text-faint);font-size:11px;font-weight:700;padding:6px 12px;
+  border-radius:6px;cursor:pointer;letter-spacing:.02em;}
+.wt-btn.active{background:var(--gold);color:#1a1408;}
+.wt-btn:not(.active):hover{color:var(--text);}
+
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--gold));}
+.kpi .eyebrow{font-size:10px;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-faint);font-weight:700;}
+.kpi .num{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--text);margin-top:6px;letter-spacing:-0.01em;}
+.kpi .num span{font-size:15px;color:var(--text-dim);font-weight:500;}
+.kpi .sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
+
+.main-grid{display:block;}
+.left-col{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.panel-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;display:flex;flex-direction:column;min-width:0;}
+.panel-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;}
+.panel-dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px 1px currentColor;}
+.panel-title{font-size:12px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--text);}
+.panel-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-faint);
+  background:var(--panel2);border:1px solid var(--border-soft);border-radius:5px;padding:1px 7px;}
+.panel-items{display:flex;flex-direction:column;gap:11px;overflow-y:auto;max-height:420px;}
+.item{border-left:2px solid var(--border-soft);padding-left:10px;}
+.item .lbl{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.item .txt{font-size:12px;line-height:1.5;color:var(--text-dim);}
+.item .meta{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:4px;}
+.item a{color:var(--gold-soft);text-decoration:none;}
+
+.map-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;position:relative;}
+.map-panel .panel-hd{margin-bottom:8px;}
+.map-svg-wrap{position:relative;width:100%;border-radius:8px;overflow:hidden;background:#060a10;
+  border:1px solid var(--border-soft);}
+.map-svg-wrap svg{display:block;width:100%;height:auto;}
+.map-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:10.5px;color:var(--text-dim);}
+.map-legend span{display:inline-flex;align-items:center;gap:5px;}
+.map-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.map-tip{position:absolute;pointer-events:none;background:#0b1120;border:1px solid var(--gold-soft);
+  border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.45;max-width:260px;color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;
+  z-index:40;}
+.map-tip.show{opacity:1;transform:translateY(0);}
+.map-tip .t-name{font-weight:800;font-size:12px;margin-bottom:3px;}
+.map-tip .t-meta{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:5px;}
+.marker circle.pulse{animation:pulse 2.4s ease-out infinite;}
+.marker circle.core{filter:drop-shadow(0 0 3px currentColor);}
+.marker{cursor:pointer;}
+@keyframes pulse{0%{r:5;opacity:0.55;}70%{r:15;opacity:0;}100%{r:15;opacity:0;}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;
+  font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--border);
+  text-transform:uppercase;white-space:nowrap;}
+.status-pill.live{color:var(--green);border-color:rgba(95,196,143,.35);background:rgba(95,196,143,.08);}
+.status-pill.offline{color:var(--amber);border-color:rgba(255,154,77,.35);background:rgba(255,154,77,.08);}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.status-pill.live .dot{animation:blink 1.6s ease-in-out infinite;}
+.refresh-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:7px 12px;font-size:11px;font-family:var(--sans);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;}
+.refresh-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-btn.spinning svg{animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.icon-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;}
+.icon-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+
+.offline-banner{display:none;background:rgba(255,154,77,.10);border:1px solid rgba(255,154,77,.35);
+  color:#ffbf8a;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.offline-banner.show{display:block;}
+.offline-banner b{color:#fff;}
+.connector-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.conn-badge{font-family:var(--mono);font-size:9.5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border-soft);
+  color:var(--text-faint);}
+.conn-badge.ok{color:var(--green);border-color:rgba(95,196,143,.3);}
+.conn-badge.err{color:var(--red);border-color:rgba(239,83,84,.3);}
+.conn-badge.off{color:var(--text-faint);}
+.empty-note{font-size:11.5px;color:var(--text-faint);font-style:italic;padding:6px 0;}
+.infra-note{font-size:9.5px;color:var(--text-faint);margin-top:8px;padding-top:8px;
+  border-top:1px solid var(--border-soft);line-height:1.5;}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(4,6,10,.7);display:none;align-items:center;
+  justify-content:center;z-index:100;padding:20px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;
+  max-width:460px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal h3{margin:0 0 4px;font-size:15px;color:var(--text);}
+.modal .modal-sub{font-size:11.5px;color:var(--text-faint);margin-bottom:16px;line-height:1.5;}
+.modal label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);margin:10px 0 4px;}
+.modal input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:9px 11px;color:var(--text);font-size:12px;font-family:var(--mono);outline:none;}
+.modal input:focus{border-color:var(--gold-soft);}
+.key-field{margin-bottom:16px;}
+.key-field label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);margin:0 0 4px;}
+.key-field .kf-status{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
+.key-field .kf-status.on{background:var(--green);box-shadow:0 0 6px 1px var(--green);}
+.key-field .kf-help{font-size:10.5px;color:var(--text-faint);margin-bottom:6px;}
+.modal-actions{display:flex;gap:10px;margin-top:18px;align-items:center;}
+.btn-primary{background:var(--gold);color:#1a1408;border:none;border-radius:8px;padding:10px 18px;
+  font-size:12px;font-weight:700;cursor:pointer;}
+.btn-primary:hover{opacity:.9;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:10px 18px;font-size:12px;cursor:pointer;}
+.modal-msg{font-size:11.5px;margin-top:12px;min-height:16px;}
+.modal-msg.ok{color:var(--green);}
+.modal-msg.err{color:var(--red);}
+.custom-marker-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:11px;
+  border-bottom:1px solid var(--border-soft);gap:8px;}
+.custom-marker-row button{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:15px;flex:none;}
+.custom-marker-row button:hover{color:var(--red);}
+
+.skel{background:linear-gradient(90deg,var(--panel2) 25%,#131f30 37%,var(--panel2) 63%);
+  background-size:400% 100%;animation:skel 1.4s ease infinite;border-radius:4px;}
+@keyframes skel{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.marker-tt-link{display:block;color:var(--gold);font-size:10px;margin-top:3px;text-decoration:none;}
+.map-body{display:grid;grid-template-columns:1fr 190px;gap:12px;align-items:start;}
+.layers-panel{background:#070a10;border:1px solid var(--border-soft);border-radius:8px;padding:10px;
+  display:flex;flex-direction:column;gap:2px;max-height:520px;overflow-y:auto;}
+.layers-hd{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text-faint);
+  font-weight:700;margin-bottom:6px;}
+.layer-toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);
+  padding:6px 4px;border-radius:5px;cursor:pointer;user-select:none;}
+.layer-toggle:hover{background:var(--panel2);color:var(--text);}
+.layer-toggle input{accent-color:var(--gold);width:13px;height:13px;flex:none;}
+.layer-toggle i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+@media (max-width:900px){.map-body{grid-template-columns:1fr;}}
+
+.dash-footer{margin-top:18px;padding:16px 4px 4px;border-top:1px solid var(--border-soft);
+  display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;align-items:baseline;
+  font-size:11px;color:var(--text-faint);}
+.dash-footer b{color:var(--text-dim);}
+.dash-footer .brandline{color:var(--gold-soft);font-weight:700;letter-spacing:0.03em;}
+
+.methodology{font-size:11.5px;color:var(--text-dim);line-height:1.6;}
+.methodology li{margin-bottom:6px;}
+.dim{opacity:0.28 !important;transition:opacity .2s;}
+
+@media (max-width:1180px){
+  .panel-row{grid-template-columns:repeat(2,1fr);}
+  .kpi-row{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:700px){
+  .panel-row{grid-template-columns:1fr;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+  .hdr-clock{display:none;}
+}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){
+  .live-dot,.marker circle.pulse{animation:none !important;}
+}
+
+/* ---------- live/offline status + refresh (new) ---------- */
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;
+  font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--border);
+  text-transform:uppercase;white-space:nowrap;}
+.status-pill.live{color:var(--green);border-color:rgba(95,196,143,.35);background:rgba(95,196,143,.08);}
+.status-pill.offline{color:var(--amber);border-color:rgba(255,154,77,.35);background:rgba(255,154,77,.08);}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.status-pill.live .dot{animation:blink 1.6s ease-in-out infinite;}
+.refresh-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:7px 12px;font-size:11px;font-family:var(--sans);cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,color .15s;}
+.refresh-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.refresh-btn:disabled{opacity:.5;cursor:default;}
+.refresh-btn svg{transition:transform .5s;}
+.refresh-btn.spinning svg{animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.offline-banner{display:none;background:rgba(255,154,77,.10);border:1px solid rgba(255,154,77,.35);
+  color:#ffbf8a;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.offline-banner.show{display:block;}
+.offline-banner b{color:#fff;}
+.connector-strip{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.conn-badge{font-family:var(--mono);font-size:9.5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border-soft);
+  color:var(--text-faint);}
+.conn-badge.ok{color:var(--green);border-color:rgba(95,196,143,.3);}
+.conn-badge.err{color:var(--red);border-color:rgba(239,83,84,.3);}
+.conn-badge.off{color:var(--text-faint);}
+.empty-note{font-size:11.5px;color:var(--text-faint);font-style:italic;padding:6px 0;}
+.infra-note{font-size:9.5px;color:var(--text-faint);margin-top:8px;padding-top:8px;
+  border-top:1px solid var(--border-soft);line-height:1.5;}
+
+/* ---------- settings modal (new) ---------- */
+.icon-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;flex:none;transition:border-color .15s,color .15s;}
+.icon-btn:hover{border-color:var(--gold-soft);color:var(--text);}
+.modal-backdrop{position:fixed;inset:0;background:rgba(4,6,10,.7);display:none;align-items:center;
+  justify-content:center;z-index:100;padding:20px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;
+  max-width:480px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal h3{margin:0 0 4px;font-size:15px;color:var(--text);}
+.modal .modal-sub{font-size:11.5px;color:var(--text-faint);margin-bottom:18px;line-height:1.5;}
+.key-field{margin-bottom:16px;}
+.key-field label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.key-field .kf-status{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
+.key-field .kf-status.on{background:var(--green);box-shadow:0 0 6px 1px var(--green);}
+.key-field .kf-help{font-size:10.5px;color:var(--text-faint);margin-bottom:6px;}
+.key-field input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:7px;
+  padding:9px 11px;color:var(--text);font-size:12px;font-family:var(--mono);outline:none;}
+.key-field input:focus{border-color:var(--gold-soft);}
+.modal-actions{display:flex;gap:10px;margin-top:20px;align-items:center;}
+.btn-primary{background:var(--gold);color:#1a1408;border:none;border-radius:8px;padding:10px 18px;
+  font-size:12px;font-weight:700;cursor:pointer;}
+.btn-primary:hover{opacity:.9;}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:10px 18px;font-size:12px;cursor:pointer;}
+.modal-msg{font-size:11.5px;margin-top:12px;min-height:16px;}
+.modal-msg.ok{color:var(--green);}
+.modal-msg.err{color:var(--red);}
+.skel{background:linear-gradient(90deg,var(--panel2) 25%,#131f30 37%,var(--panel2) 63%);
+  background-size:400% 100%;animation:skel 1.4s ease infinite;border-radius:4px;}
+@keyframes skel{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.marker-tt-link{display:block;color:var(--gold);font-size:10px;margin-top:3px;text-decoration:none;}
+
+/* ---------- map body: map + layer toggles side by side (new) ---------- */
+.map-body{display:grid;grid-template-columns:1fr 190px;gap:12px;align-items:start;}
+.layers-panel{background:#070a10;border:1px solid var(--border-soft);border-radius:8px;padding:10px;
+  display:flex;flex-direction:column;gap:2px;}
+.layers-hd{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--text-faint);
+  font-weight:700;margin-bottom:6px;}
+.layer-toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);
+  padding:6px 4px;border-radius:5px;cursor:pointer;user-select:none;}
+.layer-toggle:hover{background:var(--panel2);color:var(--text);}
+.layer-toggle input{accent-color:var(--gold);width:13px;height:13px;flex:none;}
+.layer-toggle i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;}
+@media (max-width:900px){.map-body{grid-template-columns:1fr;}}
+
+
+.main-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:stretch;}
+.ticker-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.ticker-hd{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;flex:none;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px 1px var(--red);animation:blink 1.6s ease-in-out infinite;}
+.ticker-viewport{flex:1;min-height:600px;overflow:hidden;position:relative;padding:0 4px;
+  mask-image:linear-gradient(to bottom,transparent 0,black 24px,black calc(100% - 24px),transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,black 24px,black calc(100% - 24px),transparent 100%);}
+.ticker-track{display:flex;flex-direction:column;animation:tickerScroll 110s linear infinite;}
+.ticker-track.paused{animation-play-state:paused;}
+@keyframes tickerScroll{from{transform:translateY(0);}to{transform:translateY(-50%);}}
+.tick-item{padding:10px 12px;border-bottom:1px solid var(--border-soft);}
+.tick-item .tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;padding:1.5px 6px;border-radius:4px;margin-right:6px;color:#0a0e17;}
+.tick-item .txt{font-size:12px;line-height:1.45;color:var(--text);display:block;margin-top:5px;}
+.tick-item .meta{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);margin-top:5px;}
+.ticker-ftr{flex:none;padding:9px 16px;border-top:1px solid var(--border-soft);font-size:10px;color:var(--text-faint);text-align:center;}
+.dw-select{margin-left:auto;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;}
+.dw-status{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin:-4px 0 10px;}
+@media (max-width:1180px){.main-grid{grid-template-columns:1fr;}}
+@media (prefers-reduced-motion: reduce){.ticker-track,.live-dot{animation:none !important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+  <div class="brand"><svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+  <circle cx="17" cy="17" r="15.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.55"/>
+  <circle cx="17" cy="17" r="10.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.75"/>
+  <circle cx="17" cy="17" r="2.6" fill="#c9a35c"/>
+  <path d="M17 1.5V8.5M17 25.5V32.5M1.5 17H8.5M25.5 17H32.5" stroke="#c9a35c" stroke-width="1.3" opacity="0.85"/>
+</svg>
+    <div class="brand-text"><div class="brand-title">China Digital Dashboard</div>
+      <div class="brand-sub">Open-Source Intelligence &mdash; Live Backend</div></div>
+  </div>
+  <div class="search-wrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <circle cx="11" cy="11" r="7" stroke="#8b9bb4" stroke-width="2"/>
+  <path d="M21 21l-4.3-4.3" stroke="#8b9bb4" stroke-width="2" stroke-linecap="round"/></svg>
+    <input id="filterInput" type="text" placeholder="Filter dashboard (e.g. Taiwan, tariffs, typhoon)&hellip;" autocomplete="off"/>
+  </div>
+  <div class="hdr-right">
+    <div class="window-toggle" id="windowToggle">
+      <button class="wt-btn active" data-window="72h">Last 72h</button>
+      <button class="wt-btn" data-window="all">All Time</button>
+    </div>
+    <span class="status-pill offline" id="statusPill"><span class="dot"></span><span id="statusPillText">Checking&hellip;</span></span>
+    <button class="icon-btn" id="plotBtn" title="Plot a location on the map"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <path d="M12 2C8 2 5 5.5 5 9.5C5 14.5 12 22 12 22S19 14.5 19 9.5C19 5.5 16 2 12 2Z" stroke="currentColor" stroke-width="1.8"/>
+  <circle cx="12" cy="9.5" r="2.3" fill="currentColor"/>
+</svg></button>
+    <button class="icon-btn" id="settingsBtn" title="API Keys"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+  <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/>
+  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6"/>
+</svg></button>
+    <button class="refresh-btn" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+  <path d="M21 12a9 9 0 11-2.6-6.4M21 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Refresh</span></button>
+    <div class="hdr-clock"><b id="snapClock">&mdash;</b><span id="snapDate">&nbsp;</span></div>
+  </div>
+</header>
+
+<div class="modal-backdrop" id="settingsBackdrop">
+  <div class="modal">
+    <h3>API Keys</h3>
+    <div class="modal-sub">Stored AES-256-GCM encrypted on this machine (data/secrets.enc), never sent anywhere
+      but this local server. GDELT, RSS, and USGS already work with zero keys - these three are optional,
+      for more sources.</div>
+    <div id="keyFields">Loading&hellip;</div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="saveKeysBtn">Save &amp; reconnect</button>
+      <button class="btn-secondary" id="closeSettingsBtn">Close</button>
+    </div>
+    <div class="modal-msg" id="settingsMsg"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="plotBackdrop">
+  <div class="modal">
+    <h3>Plot a location</h3>
+    <div class="modal-sub">Adds a marker at the coordinates you enter, with your remark - saved locally in
+      data/custom_markers.json on this machine, never sent anywhere else.</div>
+    <label>Label</label><input type="text" id="plotLabel" placeholder="e.g. Reported incident site"/>
+    <label>Remark / comment (optional)</label><input type="text" id="plotRemark" placeholder="e.g. Source, context, notes"/>
+    <label>Latitude</label><input type="text" id="plotLat" placeholder="e.g. 30.5"/>
+    <label>Longitude</label><input type="text" id="plotLon" placeholder="e.g. 114.3"/>
+    <div class="modal-actions">
+      <button class="btn-primary" id="plotAddBtn">Add marker</button>
+      <button class="btn-secondary" id="plotCloseBtn">Close</button>
+    </div>
+    <div class="modal-msg" id="plotMsg"></div>
+    <div id="customMarkersList" style="margin-top:14px;max-height:200px;overflow-y:auto;"></div>
+  </div>
+</div>
+  <div class="kpi-row" id="kpiRow">
+  <div class="kpi" style="--accent:var(--gold)"><div class="eyebrow">Map markers</div><div class="num" id="kpi-markers"><span class="skel" style="display:inline-block;width:30px;height:24px;"></span></div><div class="sub">plotted on the tactical map</div></div>
+  <div class="kpi" style="--accent:var(--amber)"><div class="eyebrow">Military signals</div><div class="num" id="kpi-military">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--cyan-h)"><div class="eyebrow">Economic &amp; trade</div><div class="num" id="kpi-economic">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--green)"><div class="eyebrow">Diplomatic events</div><div class="num" id="kpi-political">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--violet)"><div class="eyebrow">Hazard alerts</div><div class="num" id="kpi-hazard">&hellip;</div><div class="sub">current items in feed</div></div>
+  <div class="kpi" style="--accent:var(--magenta)"><div class="eyebrow">World happiness rank</div><div class="num">65<span> / 147</span></div><div class="sub">WHR 2026 &middot; static annual figure</div></div>
+</div>
+  <div class="main-grid">
+    <div class="left-col">
+  <div class="map-panel">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+    <span class="panel-title">Tactical Map &mdash; China &amp; Approaches</span>
+    <span class="panel-count" id="count-markers">&hellip;</span></div>
+  <div class="map-body">
+    <div class="map-svg-wrap" id="mapWrap"><svg viewBox="0 0 1000 760" xmlns="http://www.w3.org/2000/svg" id="mapSvg" role="img" aria-label="Tactical map of China and the surrounding region">
+  <defs>
+    <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c9a35c" stop-opacity="0.38"/><stop offset="100%" stop-color="#c9a35c" stop-opacity="0"/></linearGradient>
+    <radialGradient id="oceanGrad" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#0b1420"/>
+      <stop offset="100%" stop-color="#05080d"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="1000" height="760" fill="url(#oceanGrad)"/>
+  <g class="countries"><path class="country" d="M-32.685,330.273L-19.987,336.081L-10.65,334.097L-8.036,327.051L1.798,324.745L8.894,320.119L11.384,307.696L21.841,304.57L23.833,299.079L29.684,303.317L33.418,303.787L40.39,303.787L49.726,307.228L53.585,309.1L62.549,304.1L66.781,307.072L70.765,299.865L78.234,300.179L80.101,297.821L81.471,291.507L86.824,285.953L93.546,289.606L92.177,294.51L95.911,295.141L94.791,308.321L99.646,313.458L104.003,310.191L109.605,308.633L117.323,301.593L125.913,302.847L138.735,302.847L140.976,307.384L133.756,309.1L127.407,311.904L113.091,313.769L99.771,317.026L92.426,323.821L95.414,330.273L96.783,337.909L90.683,344.287L91.181,350.03L87.695,355.447L75.869,354.996L80.724,364.871L72.881,368.592L67.528,377.626L68.275,386.453L63.42,390.553L58.814,389.237L49.228,391.138L47.859,395.223L38.647,395.223L31.676,403.358L31.302,415.615L15.119,421.634L6.404,420.346L3.915,423.491L-3.555,421.634L-16.003,423.777L-36.917,416.477L-25.589,403.358L-26.585,394.057L-36.046,391.576L-37.042,382.341L-41.025,370.522L-35.797,362.335L-41.15,360.093L-37.789,349.276Z" />
+<path class="country" d="M358.955,524.436L358.706,534.081L354.349,531.942L355.22,542.748L351.61,535.818L350.988,528.997L348.498,522.555L343.394,514.606L331.941,514.066L333.061,519.729L329.078,527.12L323.849,524.436L321.982,526.852L318.496,525.376L313.641,524.167L311.774,513.12L307.417,502.958L309.533,494.786L301.815,491.096L304.678,486.027L312.396,480.943L303.433,473.632L307.79,464.205L317.749,470.311L323.6,470.865L324.721,480.53L336.547,482.456L348.124,482.181L355.345,484.517L349.618,496.151L344.016,496.969L340.157,504.724L347.004,511.633L348.996,503.094L352.482,502.958Z" />
+<path class="country" d="M626.978,749.384L631.957,744.762L642.539,737.887L642.041,744.012L641.294,752.006L635.319,751.631L632.704,755.875Z" />
+<path class="country" d="M346.88,445.744L351.859,450.239L350.988,458.773L340.904,459.192L330.323,458.215L322.48,460.446L311.276,455.141L310.903,452.342L319.243,441.94L325.966,438.269L334.804,441.658L341.402,441.94Z" />
+<path class="country china" d="M578.925,569.059L568.22,575.358L558.011,571.292L557.638,559.973L563.738,554.027L577.307,550.318L584.527,550.584L587.266,555.614L581.789,561.424ZM794.539,89.588L816.2,95.734L830.889,109.23L835.994,126.808L854.916,126.808L865.622,119.554L886.287,113.937L879.689,130.691L874.834,137.495L870.601,157.269L862.261,174.715L847.073,171.534L836.491,177.711L839.728,192.732L837.861,212.991L831.512,213.501L831.636,221.964L823.545,211.97L818.69,221.626L799.394,228.853L801.386,237.527L790.555,237.029L784.704,231.696L776.115,243.492L762.421,252.377L752.337,262.816L734.909,267.514L725.697,275.087L712.252,279.414L718.975,272.032L716.36,265.735L726.195,254.833L719.597,246.132L708.767,252.05L694.699,263.303L686.981,273.801L674.781,274.605L668.432,281.97L675.03,292.772L685.238,295.299L685.612,302.377L695.446,306.916L709.389,295.772L720.469,301.906L728.56,302.377L730.552,310.503L712.875,314.855L707.148,323.205L694.948,330.885L688.6,341.558L702.044,349.879L706.899,364.573L714.493,378.217L722.958,389.529L722.709,400.313L714.867,404.227L717.854,412.021L725.199,416.477L723.332,428.054L720.095,439.258L713.248,440.529L704.161,455.84L694.077,474.047L682.5,490.412L665.32,503.094L648.016,514.471L633.949,515.956L626.355,522.017L622.123,517.574L615.027,524.301L597.599,531.005L584.527,533.012L580.17,547.134L573.324,547.931L570.087,538.22L572.95,533.012L556.269,528.729L550.418,531.005L537.844,527.522L531.993,522.017L533.985,514.336L522.532,511.769L516.557,506.759L505.975,513.931L493.776,515.551L483.941,515.416L477.219,518.787L470.745,520.672L472.613,536.085L466.015,535.684L464.894,532.477L464.521,526.986L455.433,530.871L449.956,528.461L440.744,523.361L444.354,512.174L436.511,509.604L433.523,497.105L420.328,499.285L421.821,483.143L433.648,471.557L434.146,460.168L433.772,449.397L428.419,446.025L424.187,437.703L416.966,438.834L403.522,436.713L407.754,430.756L401.903,421.92L392.94,427.912L382.608,424.348L368.167,433.454L356.839,443.914L346.88,445.744L341.402,441.94L334.804,441.658L325.966,438.269L319.243,441.94L310.903,452.342L309.907,441.235L302.313,444.195L287.748,442.927L273.681,439.682L263.597,433.454L253.887,430.614L249.779,423.777L242.807,421.777L230.234,412.309L220.275,407.985L215.047,411.445L197.743,401.329L185.543,392.014L182.057,375.854L191.02,377.922L191.394,370.374L186.414,362.633L187.659,350.482L174.339,332.721L153.798,326.437L150.188,314.545L140.976,307.384L138.735,302.847L136.868,293.878L137.242,287.702L129.772,284.043L125.664,285.635L122.552,270.904L126.038,267.191L124.295,263.465L136.246,255.65L144.835,252.541L158.031,254.669L162.637,244.152L178.696,242.169L183.053,235.698L202.722,226.673L204.465,222.806L203.469,213.161L212.059,208.732L200.855,178.591L225.504,171.534L231.853,167.631L240.816,135.294L265.464,141.336L272.436,133.087L273.058,114.312L283.391,112.621L292.852,100.127L297.707,98.411L300.943,111.68L311.4,121.605L329.202,128.659L337.792,143.342L333.061,164.427L337.543,172.065L352.233,175.068L369.038,177.535L384.102,188.562L391.82,190.476L397.422,206.339L404.767,216.386L418.46,216.047L444.229,219.939L460.786,217.571L472.986,220.108L491.41,230.192L506.473,230.192L511.951,235.365L526.516,226.506L546.559,220.614L565.232,219.939L579.797,214.011L588.76,204.798L597.474,199.127L595.482,193.425L591.499,186.646L597.972,175.421L605.068,177.007L617.766,180.523L630.215,171.18L649.261,164.248L658.349,152.408L667.063,147.341L685.114,144.798L694.948,146.978L696.318,140.423L685.114,127.548L675.03,121.605L665.569,128.474L653.245,125.695L646.149,127.919L643.037,120.3L651.751,101.65L657.851,87.079L672.79,94.393L690.342,82.236L690.218,73.65L701.422,52.631L708.393,46.189L708.269,34.804L701.422,30.086L711.63,19.743L727.191,15.99L743.623,15.363L762.297,21.614L773.251,29.263L780.845,49.818L785.576,58.429L789.933,70.508Z" />
+<path class="country" d="M708.144,933.996L702.916,934.249L686.359,925.403L697.936,922.878L704.534,926.791L708.891,930.582ZM754.454,932.731L743.748,935.514L742.254,933.996L743.374,929.697L748.727,921.995L761.052,916.952L762.297,919.473L762.546,923.257ZM673.039,907.009L677.52,910.279L685.238,909.273L688.351,914.685L673.91,917.204L665.32,918.843L658.598,918.717L662.83,911.538L669.677,911.412ZM735.283,906.883L733.54,913.929L714.742,917.457L698.185,915.945L698.185,911.286L708.144,908.769L715.862,912.544L724.203,911.538ZM557.514,890.436L581.415,891.69L584.154,886.551L607.184,892.568L611.79,900.6L630.464,902.987L645.776,910.405L631.459,915.189L617.766,910.153L606.562,910.531L593.615,909.524L582.038,907.26L567.597,902.484L558.385,901.228L553.281,902.861L530.5,897.587L528.383,892.192L517.055,891.314L525.52,879.414L540.708,880.04L550.667,885.048L555.895,885.925ZM882.428,883.295L876.079,891.941L874.834,882.418L877.075,877.912L879.689,873.784L882.552,877.412ZM789.435,848.935L784.704,853.051L776.115,850.806L773.749,845.443L786.323,844.82ZM829.52,844.321L834.002,853.925L823.545,848.81L813.212,847.688L806.116,848.561L797.527,848.062L800.514,841.205L815.826,840.706ZM875.207,820.153L878.693,840.332L891.64,847.812L901.972,834.6L916.288,827.002L927.368,827.002L937.949,831.361L947.286,835.846L960.606,838.214L960.855,878.913L960.98,919.851L949.9,909.524L937.327,907.009L934.215,910.531L918.405,910.908L923.758,900.725L931.6,897.21L928.364,883.545L922.388,873.034L898.238,862.537L887.905,861.414L869.232,849.933L865.622,855.921L860.767,857.044L858.028,852.552L857.903,847.064L848.442,840.956L861.887,836.469L870.726,836.718L869.73,833.354L851.43,833.354L846.575,826.006L835.371,823.639L830.143,817.538L846.948,814.55L853.297,810.442L873.34,815.546ZM764.413,788.157L754.454,800.483L745.117,802.848L733.042,800.483L712.377,801.105L701.422,802.848L699.679,812.309L710.883,823.39L717.605,817.787L740.76,813.554L739.764,819.281L734.287,817.414L728.934,824.76L717.979,829.493L729.681,845.568L727.44,849.808L738.644,864.161L738.519,872.409L731.921,876.036L727.066,871.659L733.042,861.414L720.842,866.285L717.73,862.787L719.348,858.043L710.385,850.681L711.256,838.588L703.04,842.327L704.036,856.92L704.534,874.785L696.691,876.536L691.338,872.909L694.824,861.414L692.957,849.309L687.728,849.309L683.869,840.706L688.973,832.607L690.716,822.643L697.065,803.968L699.679,798.74L710.26,789.526L719.971,793.262L735.656,794.88L749.972,794.382L762.297,785.417ZM807.361,791.768L806.739,802.599L800.265,801.354L798.398,808.948L803.502,815.546L800.016,817.04L795.037,809.197L791.302,793.262L793.792,783.3L797.9,778.815L798.772,785.541L806.116,786.662ZM672.79,783.051L686.732,794.631L671.918,796.125L667.81,804.591L668.308,815.795L656.357,824.387L655.984,836.718L651.253,855.796L649.386,851.429L635.194,857.044L630.339,849.434L621.5,848.685L615.276,844.695L600.462,849.184L595.856,843.075L587.764,843.823L577.432,842.327L575.564,825.632L569.34,822.145L563.364,811.562L561.622,800.607L563.115,789.153L570.46,780.809L572.577,789.153L581.042,796.25L589.134,793.635L597.101,794.631L604.321,788.281L610.296,787.16L622.123,790.647L632.206,788.032L638.555,770.716L643.41,766.353L647.767,752.131L662.084,752.131L672.79,754.253L665.694,765.605L674.906,777.32ZM522.657,878.788L508.839,879.038L498.382,868.659L482.323,858.417L477.094,850.806L467.633,840.706L461.409,831.361L451.948,813.928L440.993,803.595L437.382,792.888L432.776,783.175L421.572,775.327L415.099,764.607L405.638,757.622L392.691,743.887L391.571,737.512L399.663,738.012L418.834,740.388L429.913,752.63L439.499,761.115L446.346,766.353L458.172,779.687L470.87,779.937L481.327,788.406L488.547,798.864L498.008,804.591L493.029,814.675L500.124,819.032L504.606,819.281L506.722,827.998L511.079,834.974L520.167,836.095L526.267,843.947L523.155,859.541Z" />
+<path class="country" d="M174.339,332.721L187.659,350.482L186.414,362.633L191.394,370.374L191.02,377.922L182.057,375.854L185.543,392.014L197.743,401.329L215.047,411.445L207.204,417.911L202.349,431.325L214.424,436.571L226.126,443.491L242.31,451.501L259.489,453.322L266.585,460.307L276.17,461.7L291.233,464.9L301.566,464.761L302.935,459.192L301.317,450.239L302.313,444.195L309.907,441.235L310.903,452.342L311.276,455.141L322.48,460.446L330.323,458.215L340.904,459.192L350.988,458.773L351.859,450.239L346.88,445.744L356.839,443.914L368.167,433.454L382.608,424.348L392.94,427.912L401.903,421.92L407.754,430.756L403.522,436.713L416.966,438.834L417.838,444.195L413.481,446.728L414.477,455.421L405.638,452.902L389.455,462.536L389.952,470.45L382.981,482.043L382.359,488.632L376.881,499.966L367.171,496.833L366.673,510.957L363.81,515.551L365.179,521.21L358.955,524.436L352.482,502.958L348.996,503.094L347.004,511.633L340.157,504.724L344.016,496.969L349.618,496.151L355.345,484.517L348.124,482.181L336.547,482.456L324.721,480.53L323.6,470.865L317.749,470.311L307.79,464.205L303.433,473.632L312.396,480.943L304.678,486.027L301.815,491.096L309.533,494.786L307.417,502.958L311.774,513.12L313.641,524.167L311.898,529.131L303.433,528.997L288.121,531.674L288.744,541.817L282.146,549.655L264.219,558.521L250.277,574.047L240.94,582.293L228.491,590.77L228.491,596.752L222.267,599.997L211.063,604.662L205.212,605.309L201.602,615.128L204.092,631.844L204.839,642.467L199.486,654.582L199.486,676.157L193.012,676.79L187.41,686.395L191.145,690.559L179.816,694.215L175.584,702.776L170.604,706.297L158.778,694.593L153.052,676.917L148.321,664.116L143.964,658.145L137.242,645.915L134.254,629.92L132.013,621.826L120.685,604.144L115.581,578.894L111.846,562.083L111.846,546.072L109.481,533.547L91.43,541.551L82.591,539.952L66.283,523.764L72.259,518.921L68.649,513.661L54.083,502.142L62.3,493.011L89.687,493.011L87.197,481.218L80.226,474.323L78.857,463.649L70.64,457.377L84.459,442.645L98.899,443.773L111.846,428.908L119.689,414.323L131.764,399.877L131.64,389.529L142.221,381.017L132.138,373.783L127.78,363.678L123.423,350.482L129.523,343.984L148.445,347.766L162.264,345.498Z" />
+<path class="country" d="M881.432,353.042L883.05,358.146L875.954,367.253L870.85,362.484L864.501,365.914L861.14,374.671L853.048,370.374L853.173,363.379L860.02,354.395L867.116,356.197L872.22,349.879ZM960.357,307.228L955.627,319.656L957.743,327.358L951.27,338.061L935.46,345.196L913.55,346.103L895.748,363.379L887.407,357.547L886.909,346.255L865.248,349.577L850.559,356.797L835.994,356.947L848.567,367.997L840.226,393.036L832.259,399.151L826.159,393.474L829.271,380.281L821.304,376.002L816.324,365.765L828.026,361.289L834.624,351.838L847.073,343.984L856.285,333.638L881.058,329.047L894.378,332.11L907.325,304.727L915.666,312.059L933.966,296.403L941.062,290.24L948.78,270.743L946.663,252.541L952.016,242.004L965.212,239.021L971.935,261.842L971.561,274.926L960.108,291.032ZM996.832,191.691L1005.546,195.33L1014.385,188.04L1017.124,207.365L998.7,211.97L987.745,228.685L968.2,217.233L961.478,235.698L947.659,235.864L945.917,219.263L952.016,206.168L965.337,205.14L968.947,181.224L972.682,167.453L987.247,185.773Z" />
+<path class="country" d="M88.691,224.153L81.595,227.344L65.163,239.021L59.685,250.737L55.079,250.901L51.718,242.996L35.784,242.5L33.294,228.853L27.194,228.853L28.19,211.8L13.251,199.3L-8.036,200.677L-22.726,203.254L-34.552,187.517L-44.76,181.049L-64.056,168.342L-66.421,166.742L-98.415,177.183L-97.917,240.182L-104.265,241.01L-112.98,228.015L-121.445,223.311L-135.636,226.673L-141.114,232.364L-141.736,228.183L-138.749,221.289L-141.114,215.368L-155.555,209.585L-161.157,194.118L-168.003,189.78L-168.377,184.026L-156.302,185.773L-155.804,172.772L-145.222,169.939L-134.392,172.595L-132.151,155.291L-134.392,144.07L-146.84,144.98L-157.422,140.423L-171.863,148.429L-183.44,152.227L-189.789,149.335L-188.544,139.875L-196.387,127.734L-205.599,128.104L-216.18,115.625L-209.084,101.27L-212.695,97.265L-202.736,76.195L-189.913,87.466L-188.419,73.062L-162.65,51.627L-143.23,51.024L-115.843,64.785L-101.029,72.865L-87.833,64.587L-68.164,64.191L-52.229,74.238L-48.619,68.539L-31.066,69.327L-27.954,60.022L-48.121,46.189L-36.17,36.235L-38.536,30.703L-26.585,25.343L-35.548,11.172L-29.822,3.788L16.737,-3.444L22.837,-8.8L53.959,-16.788L65.163,-25.945L87.571,-21.136L91.43,1.242L104.377,-4.085L120.436,3.152L119.44,14.736L131.266,13.48L162.513,-6.439L158.031,0.179L173.841,16.617L201.726,68.144L208.324,57.632L225.504,69.13L243.305,63.993L250.277,67.552L256.252,78.928L264.966,82.624L270.195,90.936L286.254,88.238L292.852,100.127L283.391,112.621L273.058,114.312L272.436,133.087L265.464,141.336L240.816,135.294L231.853,167.631L225.504,171.534L200.855,178.591L212.059,208.732L203.469,213.161L204.465,222.806L196.747,220.277L190.522,214.18L172.098,212.481L151.433,211.97L146.952,213.841L129.15,206.681L122.178,210.267L120.187,220.277L99.646,214.35L91.554,216.894Z" />
+<path class="country" d="M88.691,224.153L91.554,216.894L99.646,214.35L120.187,220.277L122.178,210.267L129.15,206.681L146.952,213.841L151.433,211.97L172.098,212.481L190.522,214.18L196.747,220.277L204.465,222.806L202.722,226.673L183.053,235.698L178.696,242.169L162.637,244.152L158.031,254.669L144.835,252.541L136.246,255.65L124.295,263.465L126.038,267.191L122.552,270.904L98.899,273.319L83.587,268.161L70.018,269.291L71.263,260.053L84.832,262.654L89.314,257.772L98.775,259.239L114.834,247.45L100.02,238.855L91.181,242.996L81.969,236.696L92.426,225.834Z" />
+<path class="country" d="M803.129,284.043L813.835,302.69L816.947,312.837L817.071,330.579L812.341,338.974L801.137,341.861L791.178,348.068L779.974,349.427L778.48,341.254L780.845,329.813L775.368,313.613L784.58,311.126L775.99,297.663L776.862,296.245L782.339,296.876L787.194,289.606L796.033,288.971L801.386,287.86Z" />
+<path class="country" d="M515.188,626.326L519.171,620.539L519.794,609.577L509.71,598.31L508.963,585.427L499.502,574.834L490.041,573.916L487.551,578.501L480.206,578.894L476.472,576.537L463.4,584.383L463.152,572.605L466.139,558.785L457.799,558.125L457.052,550.186L451.699,546.072L454.313,541.151L464.894,532.477L466.015,535.684L472.613,536.085L470.745,520.672L477.219,518.787L484.439,529.265L490.041,541.417L505.477,541.551L510.208,553.1L502.241,556.672L498.755,561.292L513.569,569.191L524.026,584.644L531.869,596.232L541.206,605.18L544.318,614.354L542.077,627.225L531.122,622.469L525.396,631.331Z" />
+<path class="country" d="M444.478,549.125L437.258,554.953L428.419,555.482L422.817,569.716L417.589,572.08L423.564,583.599L431.407,593.113L436.511,601.682L432.029,612.935L427.672,615.386L430.66,621.826L439.001,631.972L440.37,639.143L440.246,645.149L445.101,656.745L438.254,668.557L432.154,681.595L431.034,672.106L434.768,662.466L430.66,654.964L431.656,641.061L426.552,634.407L422.568,618.994L420.328,602.719L414.85,591.942L406.758,598.44L392.567,607.767L385.595,606.603L377.877,603.496L382.11,587.383L379.495,575.227L369.785,559.973L371.279,555.217L364.059,553.497L355.22,542.748L354.349,531.942L358.706,534.081L358.955,524.436L365.179,521.21L363.81,515.551L366.673,510.957L367.171,496.833L376.881,499.966L382.359,488.632L382.981,482.043L389.952,470.45L389.455,462.536L405.638,452.902L414.477,455.421L413.481,446.728L417.838,444.195L416.966,438.834L424.187,437.703L428.419,446.025L433.772,449.397L434.146,460.168L433.648,471.557L421.821,483.143L420.328,499.285L433.523,497.105L436.511,509.604L444.354,512.174L440.744,523.361L449.956,528.461L455.433,530.871L464.521,526.986L464.894,532.477L454.313,541.151L451.699,546.072Z" />
+<path class="country" d="M297.707,98.411L310.903,95.16L334.555,78.538L353.477,69.327L364.308,75.217L377.379,75.608L385.72,84.758L398.044,85.339L416.095,90.166L428.17,76.781L423.191,65.181L436.013,44.369L449.956,52.831L461.284,55.035L475.974,60.221L478.339,75.021L496.016,83.207L507.718,79.513L523.528,76.977L535.977,79.707L548.177,89.009L555.771,98.792L567.224,98.602L582.909,101.65L594.362,96.882L610.794,93.818L628.97,80.097L636.439,82.236L643.037,88.624L657.851,87.079L651.751,101.65L643.037,120.3L646.149,127.919L653.245,125.695L665.569,128.474L675.03,121.605L685.114,127.548L696.318,140.423L694.948,146.978L685.114,144.798L667.063,147.341L658.349,152.408L649.261,164.248L630.215,171.18L617.766,180.523L605.068,177.007L597.972,175.421L591.499,186.646L595.482,193.425L597.474,199.127L588.76,204.798L579.797,214.011L565.232,219.939L546.559,220.614L526.516,226.506L511.951,235.365L506.473,230.192L491.41,230.192L472.986,220.108L460.786,217.571L444.229,219.939L418.46,216.047L404.767,216.386L397.422,206.339L391.82,190.476L384.102,188.562L369.038,177.535L352.233,175.068L337.543,172.065L333.061,164.427L337.792,143.342L329.202,128.659L311.4,121.605L300.943,111.68Z" />
+<path class="country" d="M463.649,728.502L464.521,734.885L472.737,733.384L476.845,728.252L479.708,729.379L487.053,737.012L492.282,745.262L493.029,753.753L491.659,759.369L492.904,763.734L493.776,771.09L498.133,774.455L503.112,785.541L502.863,789.775L494.025,790.523L482.198,781.307L467.509,771.464L466.015,765.106L458.919,756.749L457.176,746.386L452.695,739.638L454.064,730.505L451.325,725.245L453.441,722.99ZM682.002,750.008L672.79,754.253L662.084,752.131L647.767,752.131L643.41,766.353L638.555,770.716L632.206,788.032L622.123,790.647L610.296,787.16L604.321,788.281L597.101,794.631L589.134,793.635L581.042,796.25L572.577,789.153L570.46,780.809L579.672,785.168L589.258,782.801L591.748,772.212L597.101,769.843L612.039,767.226L620.878,757.373L626.978,749.384L632.704,755.875L635.319,751.631L641.294,752.006L642.041,744.012L642.539,737.887L652.125,729.253L658.473,719.48L663.453,719.354L669.802,725.747L670.424,731.131L678.64,734.635L688.973,738.387L688.102,743.263L679.761,743.887Z" />
+<path class="country" d="M302.313,444.195L301.317,450.239L302.935,459.192L301.566,464.761L291.233,464.9L276.17,461.7L266.585,460.307L259.489,453.322L242.31,451.501L226.126,443.491L214.424,436.571L202.349,431.325L207.204,417.911L215.047,411.445L220.275,407.985L230.234,412.309L242.807,421.777L249.779,423.777L253.887,430.614L263.597,433.454L273.681,439.682L287.748,442.927Z" />
+<path class="country" d="M140.976,307.384L150.188,314.545L153.798,326.437L174.339,332.721L162.264,345.498L148.445,347.766L129.523,343.984L123.423,350.482L127.78,363.678L132.138,373.783L142.221,381.017L131.64,389.529L131.764,399.877L119.689,414.323L111.846,428.908L98.899,443.773L84.459,442.645L70.64,457.377L78.857,463.649L80.226,474.323L87.197,481.218L89.687,493.011L62.3,493.011L54.083,502.142L44.871,498.741L41.261,488.906L31.551,478.326L8.645,480.943L-11.522,481.218L-29.075,483.143L-24.469,467.122L-6.418,459.889L-7.538,453.462L-13.389,451.221L-13.763,438.834L-25.713,432.602L-30.693,424.062L-36.917,416.477L-16.003,423.777L-3.555,421.634L3.915,423.491L6.404,420.346L15.119,421.634L31.302,415.615L31.676,403.358L38.647,395.223L47.859,395.223L49.228,391.138L58.814,389.237L63.42,390.553L68.275,386.453L67.528,377.626L72.881,368.592L80.724,364.871L75.869,354.996L87.695,355.447L91.181,350.03L90.683,344.287L96.783,337.909L95.414,330.273L92.426,323.821L99.771,317.026L113.091,313.769L127.407,311.904L133.756,309.1Z" />
+<path class="country" d="M778.604,700.763L779.849,709.062L780.596,716.093L776.364,727.625L771.758,714.838L765.907,721.11L769.89,730.38L766.405,736.261L751.715,729.003L748.229,719.856L751.964,713.959L744.121,708.057L740.262,713.206L734.411,712.704L725.199,719.731L723.083,716.093L727.938,705.543L735.781,701.896L742.627,697.238L746.984,702.902L756.446,699.505L758.437,693.837L767.276,693.459L766.529,683.743L776.613,689.676L777.733,696.105ZM748.727,677.17L744.246,681.343L740.387,689.298L736.527,693.081L728.809,684.375L731.423,680.964L734.536,677.423L735.905,669.571L742.752,668.811L740.76,677.296L749.972,665.132ZM680.508,689.298L663.951,701.267L670.051,692.45L679.138,684.754L686.608,675.904L693.081,663.354L695.322,673.752L687.106,680.711ZM722.585,656.745L730.054,660.687L738.021,660.687L737.772,665.893L732.046,671.346L724.079,675.145L723.705,669.191L724.577,662.72ZM767.65,653.309L771.135,667.416L761.55,664.116L761.799,668.303L764.911,676.157L758.935,679.067L758.437,670.078L754.703,669.444L752.711,661.703L760.056,662.72L759.931,658.017L752.337,648.211L764.288,648.466ZM718.228,641.7L714.867,652.672L709.514,646.425L703.165,636.584L713.871,637.096ZM715.613,571.423L723.332,575.096L727.191,571.686L728.311,575.096L726.195,580.463L730.552,589.859L727.191,600.645L719.846,604.921L717.979,615.386L720.717,625.555L727.315,626.968L732.793,625.426L748.354,632.613L747.233,639.527L751.217,642.594L749.972,648.466L740.262,642.211L735.656,635.56L732.419,640.166L724.452,632.613L713.248,634.407L707.024,631.587L707.646,626.326L711.505,622.984L707.771,620.025L706.152,624.655L700.052,617.32L698.185,611.644L697.687,599.348L702.791,603.626L704.036,583.207L708.144,571.292Z" />
+<path class="country" d="M831.636,221.964L833.379,224.994L828.649,223.985L823.296,229.69L819.561,235.365L820.059,247.285L813.586,250.901L811.345,253.688L806.614,258.587L798.398,261.192L792.921,265.573L792.547,272.675L791.178,274.444L796.033,277.012L803.129,284.043L801.386,287.86L796.033,288.971L787.194,289.606L782.339,296.876L776.862,296.245L775.99,297.663L770.015,294.668L768.521,297.663L764.911,298.922L764.413,295.93L761.176,294.51L757.815,291.981L761.301,284.999L764.164,283.087L763.043,280.213L766.28,271.548L765.409,268.968L758.188,267.191L752.337,262.816L762.421,252.377L776.115,243.492L784.704,231.696L790.555,237.029L801.386,237.527L799.394,228.853L818.69,221.626L823.545,211.97Z" />
+<path class="country" d="M993.596,70.311L1006.044,104.5L987.62,98.22L980.026,125.51L992.102,144.252L991.853,156.909L982.392,146.07L974.175,159.959L971.935,144.798L973.304,126.993L971.81,106.773L974.798,92.282L975.296,66.368L967.951,46.593L969.071,18.703L980.649,9.068L975.669,-0.885L981.147,-3.871L984.383,10.331L988.74,30.292L988.491,50.22ZM-511.715,-3.017L-534.621,-2.59L-549.933,-5.155L-547.07,-14.622L-529.89,-21.572L-516.819,-17.873L-511.342,-14.406L-512.711,-8.371ZM-2973.344,-316.645L-2965.003,-309.164L-2967.866,-331.826L-2934.13,-327.05L-2909.73,-298.076L-2922.055,-284.734L-2942.471,-281.734L-2942.72,-252.917L-2947.824,-246.876L-2959.401,-247.736L-2968.862,-257.84L-2985.419,-266.312L-2988.282,-279.341L-3000.856,-284.133L-3015.047,-280.237L-3021.77,-290.771L-3019.155,-302.062L-3033.97,-294.719L-3028.368,-280.536L-3035.463,-268.076L-3035.463,-395.032L-3004.964,-369.123L-2972.348,-336.632ZM1446.11,-462.803L1432.416,-460.91L1430.3,-473.109L1446.11,-489.426ZM-3019.155,-465.081L-3035.463,-462.803L-3035.463,-489.426L-3033.845,-490.999L-3023.264,-490.999L-3005.337,-479.671L-3006.333,-474.263ZM992.973,-558.924L974.175,-558.924L948.655,-563.679L946.415,-565.851L958.241,-583.457L973.802,-587.477L991.479,-570.651ZM1081.733,-644.23L1067.417,-625.61L1047.499,-629.865L1024.344,-648.594L1027.332,-664.822L1050.487,-657.401ZM1011.522,-667.811L1001.687,-631.765L955.751,-633.192L935.211,-621.848L910.437,-652.985L917.16,-687.543L933.592,-697.351L966.457,-694.757ZM-78.372,-458.645L-85.841,-455.259L-126.424,-460.154L-129.786,-477.349L-152.318,-487.465L-154.061,-508.921L-141.363,-517.842L-141.861,-540.199L-117.088,-577.247L-128.541,-582.567L-98.788,-622.786L-102.149,-644.23L-74.264,-670.311L-33.183,-703.09L8.272,-713.109L29.559,-733.022L53.834,-740.149L62.424,-718.438L54.083,-702.043L10.015,-676.852L-28.079,-652.985L-66.67,-607.907L-85.219,-564.113L-104.763,-523.574L-102.274,-490.212ZM536.973,-741.803L540.334,-715.236L551.663,-728.128L588.138,-727.586L616.147,-701.52L626.106,-682.433L623.119,-656.418L609.301,-641.816L576.56,-615.775L567.224,-601.947L582.66,-595.581L601.084,-584.348L612.288,-592.87L618.637,-564.547L624.115,-575.483L644.033,-582.567L683.993,-575.483L686.981,-555.055L739.017,-548.652L739.764,-582.122L766.156,-574.162L786.074,-574.602L806.116,-551.633L811.843,-524.808L804.498,-507.713L820.184,-476.576L839.728,-461.288L851.679,-502.1L871.722,-484.338L892.885,-494.945L917.035,-482.779L926.123,-493.759L946.539,-488.249L937.576,-525.632L954.008,-543.568L1011.229,-532.086L1066.421,-516.619L1077.003,-492.969L1109.618,-463.183L1159.912,-470.424L1184.685,-464.321L1195.017,-448.533L1193.523,-421.851L1208.836,-411.86L1225.517,-418.983L1247.551,-420.057L1271.08,-412.924L1294.732,-416.839L1316.393,-385.727L1331.83,-396.768L1321.746,-419.341L1327.224,-435.623L1366.935,-425.451L1392.829,-427.619L1428.682,-410.444L1446.11,-395.032L1446.11,-268.076L1445.985,-267.781L1430.051,-254.94L1413.867,-257.26L1425.071,-242.02L1432.541,-218.726L1438.267,-211.293L1439.761,-200.137L1436.524,-192.873L1413.245,-198.787L1378.513,-178.803L1367.433,-175.651L1348.387,-157.504L1330.336,-142.013L1325.73,-130.521L1307.928,-147.819L1275.437,-128.292L1269.835,-137.497L1257.884,-126.809L1241.202,-130.273L1237.219,-114.065L1222.28,-90.803L1222.654,-81.396L1236.845,-76.266L1235.227,-42.988L1223.65,-42.095L1218.297,-23.756L1223.525,-14.406L1201.74,-3.231L1197.383,20.783L1178.834,25.757L1175.099,46.593L1157.173,65.181L1152.567,51.426L1147.214,21.614L1140.243,-25.726L1146.218,-56.734L1156.799,-70.244L1157.422,-81.162L1176.718,-86.557L1199.001,-116.501L1220.413,-142.013L1242.821,-162.389L1252.78,-199.596L1237.717,-197.439L1230.247,-175.389L1198.627,-147.059L1188.419,-178.803L1156.302,-169.904L1125.179,-127.55L1135.388,-112.364L1107.627,-106.078L1088.455,-103.673L1089.327,-121.148L1069.907,-125.082L1054.47,-112.85L1016.501,-117.233L975.545,-109.941L935.211,-64.035L887.532,-11.598L907.076,-8.8L913.176,4.423L925.252,9.068L933.219,-1.311L946.912,-0.033L964.963,23.066L965.337,40.514L955.627,60.619L954.506,83.982L948.904,114.5L930.107,141.336L925.998,153.85L909.068,174.715L892.387,194.811L884.295,204.969L867.738,215.029L859.895,215.199L852.052,207.023L835.371,219.432L833.379,224.994L831.636,221.964L831.512,213.501L837.861,212.991L839.728,192.732L836.491,177.711L847.073,171.534L862.261,174.715L870.601,157.269L874.834,137.495L879.689,130.691L886.287,113.937L865.622,119.554L854.916,126.808L835.994,126.808L830.889,109.23L816.2,95.734L794.539,89.588L789.933,70.508L785.576,58.429L780.845,49.818L773.251,29.263L762.297,21.614L743.623,15.363L727.191,15.99L711.63,19.743L701.422,30.086L708.269,34.804L708.393,46.189L701.422,52.631L690.218,73.65L690.342,82.236L672.79,94.393L657.851,87.079L643.037,88.624L636.439,82.236L628.97,80.097L610.794,93.818L594.362,96.882L582.909,101.65L567.224,98.602L555.771,98.792L548.177,89.009L535.977,79.707L523.528,76.977L507.718,79.513L496.016,83.207L478.339,75.021L475.974,60.221L461.284,55.035L449.956,52.831L436.013,44.369L423.191,65.181L428.17,76.781L416.095,90.166L398.044,85.339L385.72,84.758L377.379,75.608L364.308,75.217L353.477,69.327L334.555,78.538L310.903,95.16L297.707,98.411L292.852,100.127L286.254,88.238L270.195,90.936L264.966,82.624L256.252,78.928L250.277,67.552L243.305,63.993L225.504,69.13L208.324,57.632L201.726,68.144L173.841,16.617L158.031,0.179L162.513,-6.439L131.266,13.48L119.44,14.736L120.436,3.152L104.377,-4.085L91.43,1.242L87.571,-21.136L65.163,-25.945L53.959,-16.788L22.837,-8.8L16.737,-3.444L-29.822,3.788L-35.548,11.172L-26.585,25.343L-38.536,30.703L-36.17,36.235L-48.121,46.189L-27.954,60.022L-31.066,69.327L-48.619,68.539L-52.229,74.238L-68.164,64.191L-87.833,64.587L-101.029,72.865L-115.843,64.785L-143.23,51.024L-162.65,51.627L-188.419,73.062L-189.913,87.466L-202.736,76.195L-212.695,97.265L-209.084,101.27L-216.18,115.625L-205.599,128.104L-196.387,127.734L-188.544,139.875L-189.789,149.335L-183.44,152.227L-189.042,162.821L-201.117,165.852L-213.566,184.026L-202.238,200.505L-203.483,211.97L-189.913,231.864L-197.258,238.523L-199.374,242.831L-204.976,241.673L-213.442,231.529L-217.052,231.028L-224.77,227.177L-228.629,220.277L-240.207,216.725L-247.8,219.432L-249.917,216.216L-266.971,208.049L-285.271,205.312L-295.728,202.396L-297.222,204.455L-313.157,189.78L-327.348,183.151L-338.054,172.949L-329.091,170.116L-318.759,155.111L-325.73,147.885L-307.306,140.606L-307.679,136.578L-318.883,139.509L-318.385,131.244L-312.036,126.066L-299.961,124.767L-297.969,118.62L-300.832,108.286L-295.728,98.22L-295.853,92.666L-314.277,86.306L-321.497,86.499L-329.216,77.563L-338.677,80.486L-354.487,73.65L-354.238,69.918L-358.719,61.216L-368.678,60.221L-369.674,54.034L-366.562,50.019L-374.529,38.479L-387.352,40.514L-391.211,39.497L-394.323,44.166L-398.929,43.356L-402.041,30.292L-404.904,23.481L-402.539,21.406L-392.58,22.237L-387.725,17.66L-391.211,12.012L-399.676,8.436L-398.929,4.635L-404.033,0.605L-411.751,-13.325L-409.137,-19.177L-410.382,-29.459L-422.457,-34.756L-429.055,-32.104L-430.798,-37.64L-443.869,-43.212L-447.853,-56.507L-448.973,-67.479L-454.949,-72.787L-449.596,-80.227L-453.33,-102.233L-444.492,-116.257L-446.359,-120.657L-432.167,-134.251L-445.239,-146.048L-418.598,-179.066L-407.021,-194.482L-402.29,-208.285L-420.714,-227.067L-415.735,-245.445L-426.939,-267.193L-418.474,-292.894L-433.039,-328.003L-421.461,-352.542L-440.508,-374.505L-438.765,-398.508L-428.682,-401.999L-407.519,-416.126L-394.696,-428.706L-374.156,-406.914L-340.171,-398.508L-293.114,-360.125L-283.528,-344.709L-282.657,-323.25L-296.475,-306.996L-316.891,-298.688L-372.413,-322.303L-381.625,-318.213L-361.334,-295.633L-360.462,-281.734L-359.715,-251.474L-343.656,-242.875L-333.946,-235.496L-332.328,-249.172L-339.797,-261.627L-331.83,-272.799L-301.828,-254.651L-291.247,-261.627L-299.712,-283.533L-270.706,-313.519L-259.129,-311.65L-247.551,-300.833L-240.331,-322.303L-250.664,-341.144L-244.564,-360.788L-253.776,-381.627L-218.919,-370.801L-211.823,-352.214L-227.509,-348.289L-227.509,-330.231L-217.674,-319.469L-198.503,-326.098L-195.391,-346.66L-169.373,-362.448L-125.926,-391.573L-116.59,-389.849L-128.79,-369.123L-113.353,-365.778L-104.514,-377.211L-81.111,-378.228L-62.686,-392.263L-48.495,-371.809L-34.303,-394.339L-47.374,-414.701L-40.901,-426.534L-4.177,-415.769L13.127,-404.452L58.192,-365.445L66.532,-383.333L53.834,-401.299L53.585,-409.03L38.522,-412.215L42.631,-429.431L35.908,-458.268L35.535,-470.424L58.565,-505.704L66.781,-543.146L75.993,-551.633L108.983,-540.619L111.597,-517.434L99.771,-485.118L107.489,-472.725L111.472,-446.304L108.609,-397.116L122.427,-376.195L117.074,-353.856L92.675,-308.544L106.866,-303.909L111.846,-315.081L125.54,-323.25L128.901,-338.885L139.607,-354.513L132.386,-373.493L138.237,-396.073L124.544,-398.856L121.556,-418.625L131.515,-455.259L115.332,-486.682L137.615,-513.368L134.752,-542.725L140.976,-543.568L147.45,-520.702L142.595,-482.39L155.915,-475.033L150.188,-503.299L171.102,-519.475L196.871,-521.522L219.902,-498.514L208.822,-532.256L207.577,-578.131L229.238,-587.029L259.24,-585.241L286.129,-591.068L276.046,-614.845L290.486,-646.166L304.803,-647.137L328.953,-671.816L361.818,-678.37L365.926,-692.689L398.667,-697.351L408.875,-686.006L436.76,-713.64L459.666,-712.578L463.152,-735.755L474.978,-759.689L504.357,-783.263L525.769,-764.23L508.839,-750.692ZM513.445,-819.81L477.771,-808.772L443.233,-796.234L465.89,-878.652L476.223,-886.691L485.559,-881.991L517.055,-844.811ZM-158.044,-972.396L-174.85,-962.606L-186.054,-956.646L-187.797,-944.873L-202.238,-932.569L-215.807,-950L-208.711,-973.155L-236.347,-975.435L-212.072,-989.272L-193.15,-990.049L-190.66,-969.37L-183.44,-987.722L-171.738,-1001.009L-153.314,-983.86ZM449.458,-855.702L422.319,-847.997L387.587,-866.103L366.922,-892.099L357.461,-941.959L340.406,-956.646L372.773,-1008.941L399.663,-1027.521L423.813,-987.722L452.57,-916.25Z" />
+<path class="country" d="M482.323,652.927L471.243,647.063L460.537,647.318L462.405,637.352L451.45,637.352L450.454,651.398L443.731,669.952L439.623,681.216L440.495,690.307L448.586,690.685L453.69,702.147L455.931,713.081L462.903,720.232L470.372,721.737L476.845,728.252L472.737,733.384L464.521,734.885L463.649,728.502L453.441,722.99L451.325,725.245L446.346,720.358L444.229,714.21L437.631,707.051L431.532,701.141L429.54,708.559L427.174,701.518L428.544,693.711L432.154,681.595L438.254,668.557L445.101,656.745L440.246,645.149L440.37,639.143L439.001,631.972L430.66,621.826L427.672,615.386L432.029,612.935L436.511,601.682L431.407,593.113L423.564,583.599L417.589,572.08L422.817,569.716L428.419,555.482L437.258,554.953L444.478,549.125L451.699,546.072L457.052,550.186L457.799,558.125L466.139,558.785L463.152,572.605L463.4,584.383L476.472,576.537L480.206,578.894L487.551,578.501L490.041,573.916L499.502,574.834L508.963,585.427L509.71,598.31L519.794,609.577L519.171,620.539L515.188,626.326L503.486,624.398L487.427,626.839L479.459,637.608Z" />
+<path class="country" d="M89.314,257.772L84.832,262.654L71.263,260.053L70.018,269.291L83.587,268.161L98.899,273.319L122.552,270.904L125.664,285.635L129.772,284.043L137.242,287.702L136.868,293.878L138.735,302.847L125.913,302.847L117.323,301.593L109.605,308.633L104.003,310.191L99.646,313.458L94.791,308.321L95.911,295.141L92.177,294.51L93.546,289.606L86.824,285.953L81.471,291.507L80.101,297.821L78.234,300.179L70.765,299.865L66.781,307.072L62.549,304.1L53.585,309.1L49.726,307.228L56.698,291.19L54.083,279.414L44.871,275.568L48.108,268.484L58.565,269.291L64.416,260.216L68.4,249.752L85.081,245.967L82.467,253.524L84.21,258.098Z" />
+<path class="country" d="M721.34,492.601L713.871,514.336L708.518,525.376L701.92,514.066L700.55,503.909L707.771,490.549L717.854,480.117L723.456,484.242Z" />
+<path class="country" d="M550.418,531.005L533.861,542.349L523.404,554.953L520.665,564.06L530.251,577.978L541.828,594.933L553.156,602.978L560.75,613.322L566.477,637.096L564.734,659.543L554.401,667.923L540.085,676.157L530.002,686.648L514.441,698.372L509.959,690.307L513.445,681.722L504.108,674.512L514.939,669.444L528.01,668.557L522.532,660.814L543.446,651.016L544.94,635.688L542.077,627.225L544.318,614.354L541.206,605.18L531.869,596.232L524.026,584.644L513.569,569.191L498.755,561.292L502.241,556.672L510.208,553.1L505.477,541.551L490.041,541.417L484.439,529.265L477.219,518.787L483.941,515.416L493.776,515.551L505.975,513.931L516.557,506.759L522.532,511.769L533.985,514.336L531.993,522.017L537.844,527.522Z" /></g>
+  <g id="radarSweep" data-cx="500.0" data-cy="370.2" transform="rotate(0 500.0 370.2)"><path d="M 500.0 370.2 L 418.4 -92.6 A 470 470 0 0 1 749.1 -28.4 Z" fill="url(#sweepGrad)"/></g>
+  <g class="markers" id="markerLayer"></g>
+</svg><div class="map-tip" id="mapTip"></div></div>
+    <div class="layers-panel">
+      <div class="layers-hd">LAYERS</div>
+      <label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="capital" checked/><i style="background:#c9a35c"></i>City / hub</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="flashpoint" checked/><i style="background:#ef5354"></i>Flashpoint / active dispute</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="chokepoint" checked/><i style="background:#f59e0b"></i>Maritime chokepoint</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="hazard" checked/><i style="background:#58c4ff"></i>Earthquakes M4.5+ (USGS live - shows when reported)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="submarine_base" checked/><i style="background:#fb923c"></i>Submarine base / berth</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="navy_base" checked/><i style="background:#f97316"></i>Naval base / fleet HQ</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="carrier_port" checked/><i style="background:#fdba74"></i>Carrier home port / shipyard</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="cantonment" checked/><i style="background:#c084fc"></i>Theater command / cantonment</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="nuclear_site" checked/><i style="background:#facc15"></i>Nuclear / missile site (reported)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="space_site" checked/><i style="background:#06b6d4"></i>Space launch center</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="satellite_station" checked/><i style="background:#60a5fa"></i>Satellite ground station</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="defense_industry" checked/><i style="background:#84cc16"></i>Defense industry HQ</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="pipeline" checked/><i style="background:#4ade80"></i>Gas pipeline</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="custom" checked/><i style="background:#ffffff"></i>Your plotted marker</label>
+      <div class="layers-hd" style="margin-top:8px;">INFRASTRUCTURE</div>
+      <label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="nuclear_plant" checked/><i style="background:#eab308"></i>Nuclear power plant (WRI)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="air_base" checked/><i style="background:#a78bfa"></i>Military airfield (OurAirports)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="airport" checked/><i style="background:#38bdf8"></i>Civil airport (large & medium)</label>
+<label class="layer-toggle"><input type="checkbox" class="layer-cb" data-layer="seaport" checked/><i style="background:#22c55e"></i>Commercial seaport (China coast)</label>
+      <div class="infra-note" id="infraNote">&hellip;</div>
+    </div>
+  </div>
+</div>
+  <div class="offline-banner" id="offlineBanner"></div>
+  <div class="panel-row"><div class="panel" data-cat="geo">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--green);color:var(--green)"></span>
+      <span class="panel-title">Geopolitical & Diplomatic</span><span class="panel-count" id="count-geo">&hellip;</span></div>
+      <div class="panel-items" id="items-geo"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="milops">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--amber);color:var(--amber)"></span>
+      <span class="panel-title">Military Operations & Force Posture</span><span class="panel-count" id="count-milops">&hellip;</span></div>
+      <div class="panel-items" id="items-milops"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="arms">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--magenta);color:var(--magenta)"></span>
+      <span class="panel-title">Strategic Arms & Nuclear Program</span><span class="panel-count" id="count-arms">&hellip;</span></div>
+      <div class="panel-items" id="items-arms"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row"><div class="panel" data-cat="naval">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Naval & Maritime Security</span><span class="panel-count" id="count-naval">&hellip;</span></div>
+      <div class="panel-items" id="items-naval"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="scs">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">South China Sea</span><span class="panel-count" id="count-scs">&hellip;</span></div>
+      <div class="panel-items" id="items-scs"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="air">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--violet);color:var(--violet)"></span>
+      <span class="panel-title">Air Force & Aviation</span><span class="panel-count" id="count-air">&hellip;</span></div>
+      <div class="panel-items" id="items-air"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row"><div class="panel" data-cat="space">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Space Tech & Aerospace</span><span class="panel-count" id="count-space">&hellip;</span></div>
+      <div class="panel-items" id="items-space"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="tech">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+      <span class="panel-title">Critical Tech & AI Governance</span><span class="panel-count" id="count-tech">&hellip;</span></div>
+      <div class="panel-items" id="items-tech"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="cyber">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--red);color:var(--red)"></span>
+      <span class="panel-title">Cyber Espionage & APTs</span><span class="panel-count" id="count-cyber">&hellip;</span></div>
+      <div class="panel-items" id="items-cyber"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:1fr;"><div class="panel darkweb-panel" data-cat="darkweb" style="grid-column:1/-1;">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--red);color:var(--red)"></span>
+  <span class="panel-title">Darkweb &amp; Threat Intel</span><span class="panel-count" id="count-darkweb">&hellip;</span>
+  <select id="darkwebFilter" class="dw-select"><option value="all">All claims</option><option value="apac">Asia-Pacific victims only</option></select></div>
+  <div class="dw-status" id="darkwebStatus"></div>
+  <div class="panel-items" id="items-darkweb" style="max-height:460px;overflow-y:auto;"><div class="skel" style="height:60px;"></div></div>
+  <div class="infra-note"><b>Sources:</b> Ransomware.live (leak-site claims - group claims, not verified facts); Telegram threat-intel channels; and dark-web RSS sources reached through Tor that you verify yourself (data/onion_sources.json).
+  <br/><b>To read onion sources</b> you need Tor on this PC: open <b>Tor Browser</b> (it listens on port 9150) or install and start the <b>Tor service</b> (port 9050). Keep it running, then press Refresh. Nothing is needed for the clear-web and Telegram sources. This dashboard never opens .onion pages in a browser and does not search or crawl the dark web.</div>
+</div></div>
+<div class="panel-row"><div class="panel" data-cat="econ">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--cyan-h);color:var(--cyan-h)"></span>
+      <span class="panel-title">Economic & Trade</span><span class="panel-count" id="count-econ">&hellip;</span></div>
+      <div class="panel-items" id="items-econ"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="mss">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--amber);color:var(--amber)"></span>
+      <span class="panel-title">Internal Security & MSS Operations</span><span class="panel-count" id="count-mss">&hellip;</span></div>
+      <div class="panel-items" id="items-mss"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="social">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--gold);color:var(--gold)"></span>
+      <span class="panel-title">Social Pulse & Public Sentiment</span><span class="panel-count" id="count-social">&hellip;</span></div>
+      <div class="panel-items" id="items-social"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:repeat(2,1fr);"><div class="panel" data-cat="wellbeing">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--magenta);color:var(--magenta)"></span>
+      <span class="panel-title">Happiness & Wellbeing Indices</span><span class="panel-count" id="count-wellbeing">&hellip;</span></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin:0 0 8px;">
+  <div style="font-family:var(--mono);font-size:34px;font-weight:700;color:var(--text);">65<span style="font-size:15px;color:var(--text-dim);">&nbsp;/ 147</span></div>
+  <div class="meta" style="font-size:10.5px;color:var(--text-faint);">WHR 2026 &middot; Cantril ladder &asymp;5.9 &middot; static annual figure</div></div><div class="panel-items" id="items-wellbeing"><div class="skel" style="height:60px;"></div></div>
+    </div><div class="panel" data-cat="hazard">
+      <div class="panel-hd"><span class="panel-dot" style="background:var(--violet);color:var(--violet)"></span>
+      <span class="panel-title">Natural Hazards & Environmental Risks</span><span class="panel-count" id="count-hazard">&hellip;</span></div>
+      <div class="panel-items" id="items-hazard"><div class="skel" style="height:60px;"></div></div>
+    </div></div>
+<div class="panel-row" style="grid-template-columns:1fr;"><div class="panel">
+  <div class="panel-hd"><span class="panel-dot" style="background:var(--text-faint);color:var(--text-faint)"></span>
+  <span class="panel-title">Connector Status</span></div>
+  <div class="connector-strip" id="connectorStrip"><div class="skel" style="height:20px;width:100%;"></div></div>
+  <div class="item" style="margin-top:12px;border-left-color:var(--gold-soft);">
+    <div class="txt" id="methodNote">Loading&hellip;</div>
+  </div>
+</div></div>
+</div>
+    <aside class="ticker-panel">
+  <div class="ticker-hd"><span class="live-dot"></span><span class="panel-title">Latest News (running)</span>
+    <span class="panel-count" id="count-ticker">&hellip;</span></div>
+  <div class="ticker-viewport" id="tickerViewport"><div class="ticker-track" id="tickerTrack">
+    <div class="skel" style="height:60px;margin:10px;"></div></div></div>
+  <div class="ticker-ftr">Hover to pause &middot; moves bottom&rarr;top &middot; unlocated news only (located news is on the map)</div>
+</aside>
+  </div>
+  <div class="dash-footer">
+  <div><span class="brandline">China Digital Dashboard</span> &middot; By Aryan &middot; @EPureNest</div>
+  <div id="footerNote">Loading&hellip;</div>
+</div>
+</div>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
