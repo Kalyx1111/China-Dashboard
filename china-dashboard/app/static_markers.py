@@ -101,3 +101,10 @@ MARKERS = [
     {"id": "cssc", "name": "CSSC HQ, Shanghai", "lat": 31.23, "lon": 121.47, "cat": "defense_industry",
      "aliases": ["cssc"], "note": "China State Shipbuilding Corp.", "source": "SIPRI arms-industry rankings"},
 ]
+
+# India rule (shared guard): nothing is plotted inside India's survey outline.
+try:
+    from .india_guard import clean_points as _india_points
+except ImportError:  # run as a plain script
+    from india_guard import clean_points as _india_points
+MARKERS = _india_points(MARKERS)
